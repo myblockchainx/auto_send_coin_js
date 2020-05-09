@@ -40,7 +40,7 @@ class NewAccountClass {
     async start(){
         await this.initD();
 
-        let accountId = "japoia";
+        let accountId = "japoiap";
         let email = "dgiekg@33.com";
         let phoneNumber = "13145767855";
         await this.createNewAccount(accountId);
@@ -51,7 +51,7 @@ class NewAccountClass {
         if (!accountKeys.some(it => it.public_key.endsWith(publicKey))) {
             await account.addKey(publicKey);
         }
-        console.log("accKey:",accountKeys)
+        console.log("accKey:",seedPhrase)
         await this.createPhrase(accountId,email, phoneNumber, seedPhrase);
 
     }
@@ -72,7 +72,7 @@ class NewAccountClass {
                 newAccountId: accountId,
                 newAccountPublicKey: keyPair.publicKey.toString()
             })
-            console.log("ss:",ss)
+            // console.log("ss:",ss)
             await this.saveAndSelectAccount(accountId, keyPair);
         } catch (error) {
             console.log("createNewAccount:",error)
@@ -82,13 +82,13 @@ class NewAccountClass {
 
     async createPhrase(accountId, email,phoneNumber,seedPhrase){
         try {
-            let res = await  sendJson('POST', this.backUrl+"/account/sendRecoveryMessage", {
+            await sendJson('POST', this.backUrl+"/account/sendRecoveryMessage", {
                 accountId,
                 email,
                 phoneNumber,
                 seedPhrase
             });
-            console.log("res:",res)
+            // console.log("res:",res)
         } catch (error) {
             console.log("e:",error)
         }
