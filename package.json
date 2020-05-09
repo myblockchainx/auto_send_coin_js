@@ -1,0 +1,25 @@
+{
+  "name": "sendauto",
+  "version": "1.0.0",
+  "description": "",
+  "main": "NewAccountClass.js",
+  "dependencies": {
+    "fetch-send-json": "0.0.2",
+    "near-seed-phrase": "0.0.2",
+    "nearlib": "^0.22.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/myblockchainx/auto_send_coin_js.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/myblockchainx/auto_send_coin_js/issues"
+  },
+  "homepage": "https://github.com/myblockchainx/auto_send_coin_js#readme"
+}
