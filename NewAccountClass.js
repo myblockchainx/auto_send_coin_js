@@ -1,25 +1,26 @@
 
 var nearlib = require("nearlib");
-var sendJson = require('fetch-send-json');
+const nearAPI = require('near-api-js');
 var { generateSeedPhrase } = require( 'near-seed-phrase');
 var NETWORK_ID =  "default";
-const KEY_UNIQUE_PREFIX = '_4:'
-const KEY_WALLET_ACCOUNTS = KEY_UNIQUE_PREFIX + 'wallet:accounts_v2'
-const KEY_ACTIVE_ACCOUNT_ID = KEY_UNIQUE_PREFIX + 'wallet:active_account_id_v2'
+var NODE_URL = "http://13.250.204.142:3030";
+const ACCESS_KEY_FUNDING_AMOUNT = process.env.REACT_APP_ACCESS_KEY_FUNDING_AMOUNT || '0'
+const masterAccountKey = {
+    "account_id": "eis",
+    "private_key": "2FQRLLerkN7qBX22zY2KMp36tHL5odw7m3aAYK6WqnijbW3v3dKBJAVciAFyrdjx6mkMbqBffA2bS4LKPdLUxzea"
+}
 
 class NewAccountClass {
     constructor(){
-        this.backUrl = "http://192.168.80.36:3002";
-        this.accMap = new Map();
-        this.accounts = JSON.parse(
-            this.accMap.get(KEY_WALLET_ACCOUNTS) || '{}'
-        )
-        this.accountId = this.accMap.get(KEY_ACTIVE_ACCOUNT_ID) || ''
+        this.near = null;
+        this.keyStore_unecncry = null;
+        this.initBalance = '50000000000000000000000';
+        
+
     }
-    async initD(){
-        this.keyStore = new nearlib.keyStores.UnencryptedFileSystemKeyStore("/Users/rooat/.near-credentials");
-        let inMemorySigner = new nearlib.InMemorySigner(this.keyStore);
-        // console.log(inMemorySigner)
+    async nearClient(){
+        this.keyStore_unecncry = new nearlib.keyStores.UnencryptedFileSystemKeyStore("./");
+        let inMemorySigner = new nearlib.InMemorySigner(this.keyStore_unecncry);
         let signer = {
             async getPublicKey(accountId, networkId) {
                 return await inMemorySigner.getPublicKey(accountId, networkId);
@@ -33,71 +34,69 @@ class NewAccountClass {
         }
         this.connection =   nearlib.Connection.fromConfig({
             networkId: NETWORK_ID,
-            provider: { type: 'JsonRpcProvider', args: { url:  'http://192.168.80.36:3030/' } },
+            provider: { type: 'JsonRpcProvider', args: { url: NODE_URL } },
             signer: signer
         })
+        
+        let keyStore = {
+            async getKey() {
+                return nearAPI.KeyPair.fromString(masterAccountKey.private_key);
+            }
+        };
+        const near = await nearAPI.connect({
+            deps: { keyStore },
+            masterAccount: masterAccountKey.account_id,
+            nodeUrl: NODE_URL
+        });
+        return near; 
     }
-    async start(){
-        await this.initD();
-
-        let accountId = "japoiap";
-        let email = "dgiekg@33.com";
-        let phoneNumber = "13145767855";
-        await this.createNewAccount(accountId);
-
-        let account = this.getAccount(accountId);
-        const accountKeys = await account.getAccessKeys();
-        const { seedPhrase, publicKey } = generateSeedPhrase();
-        if (!accountKeys.some(it => it.public_key.endsWith(publicKey))) {
-            await account.addKey(publicKey);
+    async start(accountId){
+        this.near = await this.nearClient();
+        let index = 1;
+        while(true){
+            try {
+                index ++;
+                accountId += index
+                await this.sleep(1000);
+                await this.createNewAccount(accountId);
+                const { seedPhrase, publicKey } = generateSeedPhrase();
+                console.log("seedPhrase:",seedPhrase)
+                await new nearlib.Account(this.connection, accountId).addKey(
+                    publicKey,
+                    null,
+                    '', // methodName
+                    ACCESS_KEY_FUNDING_AMOUNT
+                )
+                await this.keyStore_unecncry.removeKey(NETWORK_ID, accountId)
+            } catch (error) {
+                console.log("error,,,")
+            }
+            
         }
-        console.log("accKey:",seedPhrase)
-        await this.createPhrase(accountId,email, phoneNumber, seedPhrase);
+        
 
-    }
-    async saveAndSelectAccount(accountId, keyPair) {
-        await this.keyStore.setKey(NETWORK_ID, accountId, keyPair)
-        this.accounts[accountId] = true
-        this.accountId = accountId
-        this.save()
-	    console.log("save is ok")
-    }
-    getAccount(accountId){
-        return new nearlib.Account(this.connection, accountId)
     }
     async createNewAccount(accountId){
         try {
-            let keyPair = nearlib.KeyPair.fromRandom('ed25519');            
-            let ss = await sendJson('POST', this.backUrl+"/account", {
-                newAccountId: accountId,
-                newAccountPublicKey: keyPair.publicKey.toString()
-            })
-            // console.log("ss:",ss)
-            await this.saveAndSelectAccount(accountId, keyPair);
+            let keyPair = nearlib.KeyPair.fromRandom('ed25519');   
+            let masterAccount = await this.near.account(masterAccountKey.account_id)
+            await masterAccount.createAccount(accountId, keyPair.publicKey.toString(), this.initBalance);
+            await this.keyStore_unecncry.setKey(NETWORK_ID, accountId, keyPair)
         } catch (error) {
             console.log("createNewAccount:",error)
         }
         
     }
 
-    async createPhrase(accountId, email,phoneNumber,seedPhrase){
-        try {
-            await sendJson('POST', this.backUrl+"/account/sendRecoveryMessage", {
-                accountId,
-                email,
-                phoneNumber,
-                seedPhrase
-            });
-            // console.log("res:",res)
-        } catch (error) {
-            console.log("e:",error)
-        }
-        
+    async sleep(times){
+        return new Promise((resolve, reject)=>{
+            //做一些异步操作
+            setTimeout(()=>{
+                resolve(1)
+            }, times);
+        });
     }
-    save() {
-        this.accMap.set(KEY_ACTIVE_ACCOUNT_ID, this.accountId)
-        this.accMap.set(KEY_WALLET_ACCOUNTS, JSON.stringify(this.accounts))
-    }
+    
 }
 var newAcc = new NewAccountClass()
-newAcc.start();
+newAcc.start("newscax");

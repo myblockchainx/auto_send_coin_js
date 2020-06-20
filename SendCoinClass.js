@@ -1,11 +1,14 @@
 var nearlib = require('nearlib')
+import { findSeedPhraseKey } from 'near-seed-phrase'
 
 class SendCoinClass {
     constructor() {
         this.account = null;
         this.currentNonce = 0;
     }
+    
     async initD(){
+        //私钥路径
         let keyStore = new nearlib.keyStores.UnencryptedFileSystemKeyStore("/Users/rooat/.near-credentials");
         let inMemorySigner = new nearlib.InMemorySigner(keyStore);
         // console.log(inMemorySigner)
@@ -25,21 +28,22 @@ class SendCoinClass {
             provider: { type: 'JsonRpcProvider', args: { url:  'http://192.168.80.36:3030/' } },
             signer: signer
         })
+        //发送者
         this.account = new nearlib.Account(connection, "dkeka");
     }
 
-    async getNonce() {
-
-    }
     async start(){
         await this.initD();
+        let re = ["eae1"];
+        let index =0;
         while (true){
-            await this.sleep(300)
+            index++
+            await this.sleep(1000)
             let accessKey = await this.account.findAccessKey();
             console.log("nonce--",accessKey.nonce)
             if(this.currentNonce < accessKey.nonce){
                 this.currentNonce = accessKey.nonce;
-                await this.excute();
+                await this.excute(re[index]);
                 console.log("res:ok:",new Date().getTime())
             }
         }
@@ -53,13 +57,23 @@ class SendCoinClass {
             }, times);
         });
     }
-    async excute(){
+    async excute(receiver){
         try {
-            let res = await this.account.sendMoney("eae1", "100000000000000")
+            //接收者
+            await this.account.sendMoney(receiver, "100000000000000")
             
         } catch (error) {
             console.log("er:",error)
         }
+    }
+    findPhrase(){
+        const { secretKey } = findSeedPhraseKey(seedPhrase, publicKeys)
+        if (!secretKey) {
+            throw new Error(`Cannot find matching public key for account ${accountId}`);
+        }
+
+        const keyPair = nearlib.KeyPair.fromString(secretKey)
+        await tempKeyStore.setKey(NETWORK_ID, accountId, keyPair)
     }
 }
 var send = new SendCoinClass();
